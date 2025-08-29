@@ -5,8 +5,10 @@ import type { ReactNode } from "react"
 import { useEffect, useRef } from "react"
 import { Provider } from "react-redux"
 
-Object.assign(window, { store })
-
+if (typeof window !== 'undefined')
+{
+	Object.assign(window, { store })
+}
 interface Props
 {
 	readonly children: ReactNode

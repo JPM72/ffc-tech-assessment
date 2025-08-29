@@ -6,6 +6,7 @@ import { getAdapterReducers, getAdapterSelectors } from '@/lib/util/adapter'
 import { createAppAsyncThunk, createAppSelector } from '@/lib/creators'
 import { apiService } from '@/lib/apiService'
 import { type AppThunk } from '@/lib/store'
+import diff from '@/lib/util/diff'
 
 const name = 'task'
 const reducerPath = 'tasks'
@@ -54,9 +55,32 @@ const addTask = createAppAsyncThunk<Task, Partial<Task>>(`${reducerPath}/add`, a
 	return task
 })
 
+const updateTask = createAppAsyncThunk<Task, Partial<Task>>(`${reducerPath}/update`, async (taskData, { dispatch, getState }) =>
+{
+	const state = getState()
+	const { id } = taskData
+	const existing = selectors.selectById(state, id)
+	const req = await dispatch(apiService.endpoints.updateTask.initiate(defaults(taskData)))
+	const task = req.data
+	dispatch(actions.updateOne({
+		id,
+		changes: diff.updated(existing, task)
+	}))
+	return task
+})
+
+const deleteTask = createAppAsyncThunk<void, string>(`${reducerPath}/delete`, async (id, { dispatch }) =>
+{
+	const req = await dispatch(apiService.endpoints.deleteTask.initiate(id))
+	if (req.error) return
+	dispatch(actions.removeOne(id))
+})
+
 export const taskThunks = {
 	setTasks,
 	addTask,
+	updateTask,
+	deleteTask,
 }
 
 export const tasksSlice = {

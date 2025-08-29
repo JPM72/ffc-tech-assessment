@@ -12,6 +12,7 @@ import
 import listenerMiddleware from './listenerMiddleware'
 import { tasksSlice } from './features/tasks/tasksSlice'
 import { listsSlice } from './features/lists/listsSlice'
+import { dashboardSlice } from './features/dashboard/dashboardSlice'
 import { apiService } from './apiService'
 
 const domainSlice = combineSlices({
@@ -23,6 +24,9 @@ export const store = configureStore({
 	devTools: process.env.NODE_ENV !== 'production',
 	reducer: {
 		domain: domainSlice,
+		view: combineSlices({
+			[dashboardSlice.slice.reducerPath]: dashboardSlice.reducer,
+		}),
 		[apiService.reducerPath]: apiService.reducer
 	},
 	middleware: (getDefaultMiddleware) => getDefaultMiddleware().prepend(

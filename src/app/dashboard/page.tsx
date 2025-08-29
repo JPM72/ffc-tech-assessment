@@ -8,6 +8,8 @@ import Input from '@/components/ui/Input'
 import ListCard from '@/components/lists/ListCard'
 import { useAppDispatch, useAppSelector } from '@/lib/hooks'
 import { listThunks, listSelectors } from '@/lib/features/lists/listsSlice'
+import { taskThunks } from '@/lib/features/tasks/tasksSlice'
+import { dashboardSelectors, dashboardThunks } from '@/lib/features/dashboard/dashboardSlice'
 
 interface ListWithTasks extends List
 {
@@ -17,97 +19,54 @@ interface ListWithTasks extends List
 export default function Dashboard()
 {
 	const dispatch = useAppDispatch()
-	const $lists = useAppSelector(listSelectors.selectListsWithTasks)
-	console.log($lists)
 
 	const { user, isLoaded } = useUser()
-	const [lists, setLists] = useState<ListWithTasks[]>([])
-	const [loading, setLoading] = useState(true)
+	const lists = useAppSelector(listSelectors.selectListsWithTasks)
+	const loading = useAppSelector(dashboardSelectors.selectLoading)
 	const [showAddList, setShowAddList] = useState(false)
-	const [newListTitle, setNewListTitle] = useState('')
-	const [searchTerm, setSearchTerm] = useState('')
-	const [sortBy, setSortBy] = useState<'created' | 'name' | 'tasks'>('created')
-	const [filterCompleted, setFilterCompleted] = useState<'all' | 'completed' | 'incomplete'>('all')
+	const newListTitle = useAppSelector(dashboardSelectors.selectNewListTitle)
+	const setNewListTitle = newListTitle => dispatch(dashboardThunks.update({ newListTitle }))
+	const searchTerm = useAppSelector(dashboardSelectors.selectSearchTerm)
+	const sortBy = useAppSelector(dashboardSelectors.selectSortBy)
+	const filterCompleted = useAppSelector(dashboardSelectors.selectFilterCompletionState)
+	const setFilterCompleted = key => dispatch(dashboardThunks.update({
+		filterCompletionState: {
+			all: null, completed: true, incomplete: false
+		}[key]
+	}))
+
+	const filteredAndSortedLists = useAppSelector(state => listSelectors.selectFilteredAndSorted(
+		state, searchTerm, filterCompleted, sortBy
+	))
 
 	useEffect(() =>
 	{
 		if (isLoaded)
 		{
-			fetchLists()
+			dispatch(listThunks.fetchListsWithTasks()).finally(() =>
+			{
+				dispatch(dashboardThunks.update({ loading: false }))
+			})
 		}
 	}, [isLoaded])
-
-	const fetchLists = async () =>
-	{
-		const lists = await dispatch(listThunks.fetchListsWithTasks())
-		console.log(lists)
-
-		try
-		{
-			const response = await fetch('/api/lists')
-			if (response.ok)
-			{
-				const data = await response.json()
-				setLists(data)
-			}
-		} catch (error)
-		{
-			console.error('Error fetching lists:', error)
-		} finally
-		{
-			setLoading(false)
-		}
-	}
 
 	const handleAddList = async (e: React.FormEvent) =>
 	{
 		e.preventDefault()
-		if (!newListTitle.trim()) return
+		const title = newListTitle.trim()
+		if (!title) return
 
-		try
-		{
-			const response = await fetch('/api/lists', {
-				method: 'POST',
-				headers: {
-					'Content-Type': 'application/json',
-				},
-				body: JSON.stringify({ title: newListTitle.trim() }),
-			})
+		await dispatch(listThunks.addList({ title }))
 
-			if (response.ok)
-			{
-				const newList = await response.json()
-				setLists(prev => [newList, ...prev])
-				setNewListTitle('')
-				setShowAddList(false)
-			}
-		} catch (error)
-		{
-			console.error('Error creating list:', error)
-		}
+		dispatch(dashboardThunks.update({
+			showAddList: false,
+			newListTitle: ''
+		}))
 	}
 
 	const handleUpdateList = async (id: string, title: string) =>
 	{
-		try
-		{
-			const response = await fetch(`/api/lists/${id}`, {
-				method: 'PUT',
-				headers: {
-					'Content-Type': 'application/json',
-				},
-				body: JSON.stringify({ title }),
-			})
-
-			if (response.ok)
-			{
-				const updatedList = await response.json()
-				setLists(prev => prev.map(list => list.id === id ? updatedList : list))
-			}
-		} catch (error)
-		{
-			console.error('Error updating list:', error)
-		}
+		await dispatch(listThunks.updateList({ id, title }))
 	}
 
 	const handleDeleteList = async (id: string) =>
@@ -117,131 +76,23 @@ export default function Dashboard()
 			return
 		}
 
-		try
-		{
-			const response = await fetch(`/api/lists/${id}`, {
-				method: 'DELETE',
-			})
-
-			if (response.ok)
-			{
-				setLists(prev => prev.filter(list => list.id !== id))
-			}
-		} catch (error)
-		{
-			console.error('Error deleting list:', error)
-		}
+		await dispatch(listThunks.deleteList(id))
 	}
 
 	const handleAddTask = async (listId: string, title: string, description?: string) =>
 	{
-		try
-		{
-			const response = await fetch('/api/tasks', {
-				method: 'POST',
-				headers: {
-					'Content-Type': 'application/json',
-				},
-				body: JSON.stringify({ listId, title, description }),
-			})
-
-			if (response.ok)
-			{
-				const newTask = await response.json()
-				setLists(prev => prev.map(list =>
-					list.id === listId
-						? { ...list, tasks: [newTask, ...list.tasks] }
-						: list
-				))
-			}
-		} catch (error)
-		{
-			console.error('Error creating task:', error)
-		}
+		await dispatch(taskThunks.addTask({ listId, title, description }))
 	}
 
 	const handleUpdateTask = async (id: string, data: Partial<Task>) =>
 	{
-		try
-		{
-			const response = await fetch(`/api/tasks/${id}`, {
-				method: 'PUT',
-				headers: {
-					'Content-Type': 'application/json',
-				},
-				body: JSON.stringify(data),
-			})
-
-			if (response.ok)
-			{
-				const updatedTask = await response.json()
-				setLists(prev => prev.map(list => ({
-					...list,
-					tasks: list.tasks.map(task => task.id === id ? updatedTask : task)
-				})))
-			}
-		} catch (error)
-		{
-			console.error('Error updating task:', error)
-		}
+		await dispatch(taskThunks.updateTask({ id, ...data }))
 	}
 
 	const handleDeleteTask = async (id: string) =>
 	{
-		try
-		{
-			const response = await fetch(`/api/tasks/${id}`, {
-				method: 'DELETE',
-			})
-
-			if (response.ok)
-			{
-				setLists(prev => prev.map(list => ({
-					...list,
-					tasks: list.tasks.filter(task => task.id !== id)
-				})))
-			}
-		} catch (error)
-		{
-			console.error('Error deleting task:', error)
-		}
+		await dispatch(taskThunks.deleteTask(id))
 	}
-
-	const filteredAndSortedLists = lists
-		.filter(list =>
-		{
-			const matchesSearch = searchTerm === '' ||
-				list.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-				list.tasks.some(task =>
-					task.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-					(task.description && task.description.toLowerCase().includes(searchTerm.toLowerCase()))
-				)
-
-			if (!matchesSearch) return false
-
-			if (filterCompleted === 'all') return true
-
-			const hasCompletedTasks = list.tasks.some(task => task.completed)
-			const hasIncompleteTasks = list.tasks.some(task => !task.completed)
-
-			if (filterCompleted === 'completed') return hasCompletedTasks
-			if (filterCompleted === 'incomplete') return hasIncompleteTasks || list.tasks.length === 0
-
-			return true
-		})
-		.sort((a, b) =>
-		{
-			switch (sortBy)
-			{
-				case 'name':
-					return a.title.localeCompare(b.title)
-				case 'tasks':
-					return b.tasks.length - a.tasks.length
-				case 'created':
-				default:
-					return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-			}
-		})
 
 	if (!isLoaded || loading)
 	{
@@ -279,13 +130,13 @@ export default function Dashboard()
 						<Input
 							placeholder="Search lists and tasks..."
 							value={searchTerm}
-							onChange={(e) => setSearchTerm(e.target.value)}
+							onChange={(e) => dispatch(dashboardThunks.update({ searchTerm: e.target.value }))}
 							className="flex-1"
 						/>
 						<div className="flex gap-2">
 							<select
 								value={sortBy}
-								onChange={(e) => setSortBy(e.target.value as any)}
+								onChange={(e) => dispatch(dashboardThunks.update({ sortBy: e.target.value as any }))}
 								className="rounded-md border border-gray-300 px-3 py-2 text-sm"
 							>
 								<option value="created">Sort by Created</option>
@@ -318,8 +169,10 @@ export default function Dashboard()
 								type="button"
 								onClick={() =>
 								{
-									setShowAddList(false)
-									setNewListTitle('')
+									dispatch(dashboardThunks.update({
+										showAddList: false,
+										newListTitle: ''
+									}))
 								}}
 								variant="secondary"
 							>

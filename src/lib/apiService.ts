@@ -73,7 +73,7 @@ export const apiService = createApi({
 				body,
 				method: 'POST',
 			}),
-			invalidatesTags: [TAG_TASKS],
+			invalidatesTags: [TAG_LISTS, TAG_TASKS],
 		}),
 		updateTask: builder.mutation<Task, Partial<Task>>({
 			query: body => ({
