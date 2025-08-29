@@ -1,7 +1,9 @@
 import './globals.css'
 import type { Metadata } from 'next'
+import { StrictMode } from 'react'
 import { Inter } from 'next/font/google'
 import { ClerkProvider } from '@clerk/nextjs'
+import { StoreProvider } from './StoreProvider'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -17,11 +19,15 @@ export default function RootLayout({
 })
 {
 	return (
-		<ClerkProvider>
-			<html lang="en">
-				<link rel="icon" href="/favicon.ico" sizes="any" />
-				<body className={inter.className}>{children}</body>
-			</html>
-		</ClerkProvider>
+		<StrictMode>
+			<StoreProvider>
+				<ClerkProvider>
+					<html lang="en">
+						<link rel="icon" href="/favicon.ico" sizes="any" />
+						<body className={inter.className}>{children}</body>
+					</html>
+				</ClerkProvider>
+			</StoreProvider>
+		</StrictMode>
 	)
 }

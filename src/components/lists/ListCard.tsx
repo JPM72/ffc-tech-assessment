@@ -6,6 +6,8 @@ import Button from '@/components/ui/Button'
 import Input from '@/components/ui/Input'
 import TaskItem from '@/components/tasks/TaskItem'
 import AddTaskForm from '@/components/tasks/AddTaskForm'
+import { useAppDispatch, useAppSelector } from '@/lib/hooks'
+import { taskThunks } from '@/lib/features/tasks/tasksSlice'
 
 interface ListWithTasks extends List
 {
@@ -26,14 +28,24 @@ export default function ListCard({
 	list,
 	onUpdateList,
 	onDeleteList,
-	onAddTask,
+	// onAddTask,
 	onUpdateTask,
 	onDeleteTask
 }: ListCardProps)
 {
+	const dispatch = useAppDispatch()
 	const [isEditing, setIsEditing] = useState(false)
 	const [title, setTitle] = useState(list.title)
 	const [showAddTask, setShowAddTask] = useState(false)
+
+	const onAddTask = async (title, description) =>
+	{
+		await dispatch(taskThunks.addTask({
+			listId: list.id,
+			title,
+			description
+		}))
+	}
 
 	const handleSaveTitle = () =>
 	{
@@ -117,7 +129,7 @@ export default function ListCard({
 
 			{showAddTask ? (
 				<AddTaskForm
-					onAdd={(title, description) => onAddTask(list.id, title, description)}
+					onAdd={onAddTask}
 					onCancel={() => setShowAddTask(false)}
 				/>
 			) : (
