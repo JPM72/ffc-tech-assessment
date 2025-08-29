@@ -1,20 +1,15 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { useUser, UserButton } from '@clerk/nextjs'
-import { List, Task } from '@prisma/client'
+import ListCard from '@/components/lists/ListCard'
 import Button from '@/components/ui/Button'
 import Input from '@/components/ui/Input'
-import ListCard from '@/components/lists/ListCard'
-import { useAppDispatch, useAppSelector } from '@/lib/hooks'
-import { listThunks, listSelectors } from '@/lib/features/lists/listsSlice'
-import { taskThunks } from '@/lib/features/tasks/tasksSlice'
 import { dashboardSelectors, dashboardThunks } from '@/lib/features/dashboard/dashboardSlice'
-
-interface ListWithTasks extends List
-{
-	tasks: Task[]
-}
+import { listSelectors, listThunks } from '@/lib/features/lists/listsSlice'
+import { taskThunks } from '@/lib/features/tasks/tasksSlice'
+import { useAppDispatch, useAppSelector } from '@/lib/hooks'
+import { UserButton, useUser } from '@clerk/nextjs'
+import { Task } from '@prisma/client'
+import { useEffect, useState } from 'react'
 
 export default function Dashboard()
 {
@@ -29,11 +24,9 @@ export default function Dashboard()
 	const searchTerm = useAppSelector(dashboardSelectors.selectSearchTerm)
 	const sortBy = useAppSelector(dashboardSelectors.selectSortBy)
 	const filterCompleted = useAppSelector(dashboardSelectors.selectFilterCompletionState)
-	const setFilterCompleted = key => dispatch(dashboardThunks.update({
-		filterCompletionState: {
-			all: null, completed: true, incomplete: false
-		}[key]
-	}))
+	const setFilterCompleted = filterCompletionState => dispatch(
+		dashboardThunks.update({ filterCompletionState })
+	)
 
 	const filteredAndSortedLists = useAppSelector(state => listSelectors.selectFilteredAndSorted(
 		state, searchTerm, filterCompleted, sortBy
@@ -81,6 +74,7 @@ export default function Dashboard()
 
 	const handleAddTask = async (listId: string, title: string, description?: string) =>
 	{
+		console.log({ listId, title, description })
 		await dispatch(taskThunks.addTask({ listId, title, description }))
 	}
 
@@ -111,7 +105,7 @@ export default function Dashboard()
 	}
 
 	return (
-		<div className="min-h-screen bg-gray-50">
+		<div className="min-h-screen bg-gray-200">
 			<header className="bg-white shadow-sm">
 				<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
 					<div className="flex items-center justify-between">
@@ -137,7 +131,7 @@ export default function Dashboard()
 							<select
 								value={sortBy}
 								onChange={(e) => dispatch(dashboardThunks.update({ sortBy: e.target.value as any }))}
-								className="rounded-md border border-gray-300 px-3 py-2 text-sm"
+								className="rounded-md bg-white border border-gray-300 px-3 py-2 text-sm"
 							>
 								<option value="created">Sort by Created</option>
 								<option value="name">Sort by Name</option>
@@ -146,7 +140,7 @@ export default function Dashboard()
 							<select
 								value={filterCompleted}
 								onChange={(e) => setFilterCompleted(e.target.value as any)}
-								className="rounded-md border border-gray-300 px-3 py-2 text-sm"
+								className="rounded-md bg-white border border-gray-300 px-3 py-2 text-sm"
 							>
 								<option value="all">All Lists</option>
 								<option value="completed">With Completed Tasks</option>
@@ -189,7 +183,7 @@ export default function Dashboard()
 						{filteredAndSortedLists.map(list => (
 							<ListCard
 								key={list.id}
-								list={list}
+								listId={list.id}
 								onUpdateList={handleUpdateList}
 								onDeleteList={handleDeleteList}
 								onAddTask={handleAddTask}

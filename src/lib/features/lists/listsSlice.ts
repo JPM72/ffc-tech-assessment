@@ -47,6 +47,19 @@ const {
 } = getAdapterSelectors<List>(adapter, ['domain', reducerPath])
 export { listRootSelector }
 
+const selectListWithTasks = createAppSelector([
+	selectors.selectEntities,
+	taskSelectors.selectAll,
+	(state, listId: string) => listId
+], (lists, tasks, listId) =>
+{
+	return _.assign(
+		{},
+		lists[listId],
+		{ tasks: _.filter(tasks, { listId }) }
+	)
+})
+
 const selectListsWithTasks = createAppSelector([
 	selectors.selectEntities,
 	taskSelectors.selectAll,
@@ -110,6 +123,7 @@ const selectFilteredAndSorted = createAppSelector([
 
 export const listSelectors = {
 	...selectors,
+	selectListWithTasks,
 	selectListsWithTasks,
 	selectFilteredAndSorted,
 }
@@ -129,7 +143,8 @@ const updateList = createAppAsyncThunk<List, Partial<List>>(`${reducerPath}/upda
 	const state = getState()
 	const { id } = listData
 	const existing = selectors.selectById(state, id)
-	const req = await dispatch(apiService.endpoints.updateList.initiate(defaults(listData)))
+	const updated = _.defaultsDeep({}, listData, existing)
+	const req = await dispatch(apiService.endpoints.updateList.initiate(updated))
 	const list = req.data
 	dispatch(actions.updateOne({
 		id,
@@ -148,7 +163,6 @@ const deleteList = createAppAsyncThunk<void, string>(`${reducerPath}/delete`, as
 const fetchListsWithTasks = createAppAsyncThunk<ListWithTasks[], undefined>(`${reducerPath}/fetch`, async (v, { dispatch }) =>
 {
 	const req = await dispatch(apiService.endpoints.getLists.initiate())
-	console.log(req)
 	if (!req.isSuccess) return []
 
 	const { data } = req

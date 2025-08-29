@@ -4,22 +4,30 @@ import { useState } from 'react'
 import { Task } from '@prisma/client'
 import Button from '@/components/ui/Button'
 import Input from '@/components/ui/Input'
+import { tasksSlice, taskSelectors, taskThunks } from '@/lib/features/tasks/tasksSlice'
+import { useAppDispatch, useAppSelector } from '@/lib/hooks'
 
 interface TaskItemProps
 {
-	task: Task
+	taskId: string
 	onUpdate: (id: string, data: Partial<Task>) => void
 	onDelete: (id: string) => void
 }
 
-export default function TaskItem({ task, onUpdate, onDelete }: TaskItemProps)
+export default function TaskItem({ taskId, onUpdate, onDelete }: TaskItemProps)
 {
+	const dispatch = useAppDispatch()
+	const task = useAppSelector(state => taskSelectors.selectById(state, taskId))
 	const [isEditing, setIsEditing] = useState(false)
 	const [title, setTitle] = useState(task.title)
 	const [description, setDescription] = useState(task.description || '')
 
 	const handleToggleComplete = () =>
 	{
+		// dispatch(tasksSlice.actions.updateOne({
+		// 	id: taskId,
+		// 	changes: { completed: !task.completed }
+		// }))
 		onUpdate(task.id, { completed: !task.completed })
 	}
 

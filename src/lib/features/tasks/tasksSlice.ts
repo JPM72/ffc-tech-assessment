@@ -60,7 +60,8 @@ const updateTask = createAppAsyncThunk<Task, Partial<Task>>(`${reducerPath}/upda
 	const state = getState()
 	const { id } = taskData
 	const existing = selectors.selectById(state, id)
-	const req = await dispatch(apiService.endpoints.updateTask.initiate(defaults(taskData)))
+	const updated = _.defaultsDeep({}, taskData, existing)
+	const req = await dispatch(apiService.endpoints.updateTask.initiate(updated))
 	const task = req.data
 	dispatch(actions.updateOne({
 		id,

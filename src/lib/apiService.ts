@@ -25,7 +25,6 @@ export const apiService = createApi({
 			}),
 			providesTags: (result, error, id) =>
 			{
-				console.log({ result, error, id })
 				return result
 					? [
 						...result.map(({ id }) => ({ type: TAG_LISTS.type, id } as const)),

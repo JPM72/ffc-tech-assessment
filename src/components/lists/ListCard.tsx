@@ -8,15 +8,10 @@ import TaskItem from '@/components/tasks/TaskItem'
 import AddTaskForm from '@/components/tasks/AddTaskForm'
 import { useAppDispatch, useAppSelector } from '@/lib/hooks'
 import { taskThunks } from '@/lib/features/tasks/tasksSlice'
-
-interface ListWithTasks extends List
-{
-	tasks: Task[]
-}
-
+import { ListWithTasks, listSelectors } from '@/lib/features/lists/listsSlice'
 interface ListCardProps
 {
-	list: ListWithTasks
+	listId: string
 	onUpdateList: (id: string, title: string) => void
 	onDeleteList: (id: string) => void
 	onAddTask: (listId: string, title: string, description?: string) => void
@@ -25,27 +20,21 @@ interface ListCardProps
 }
 
 export default function ListCard({
-	list,
+	listId,
 	onUpdateList,
 	onDeleteList,
-	// onAddTask,
+	onAddTask,
 	onUpdateTask,
 	onDeleteTask
 }: ListCardProps)
 {
 	const dispatch = useAppDispatch()
+
+	const list = useAppSelector(state => listSelectors.selectListWithTasks(state, listId))
+
 	const [isEditing, setIsEditing] = useState(false)
 	const [title, setTitle] = useState(list.title)
 	const [showAddTask, setShowAddTask] = useState(false)
-
-	const onAddTask = async (title, description) =>
-	{
-		await dispatch(taskThunks.addTask({
-			listId: list.id,
-			title,
-			description
-		}))
-	}
 
 	const handleSaveTitle = () =>
 	{
@@ -117,7 +106,7 @@ export default function ListCard({
 					list.tasks.map(task => (
 						<TaskItem
 							key={task.id}
-							task={task}
+							taskId={task.id}
 							onUpdate={onUpdateTask}
 							onDelete={onDeleteTask}
 						/>
@@ -129,7 +118,7 @@ export default function ListCard({
 
 			{showAddTask ? (
 				<AddTaskForm
-					onAdd={onAddTask}
+					onAdd={(title, description) => onAddTask(listId, title, description)}
 					onCancel={() => setShowAddTask(false)}
 				/>
 			) : (
